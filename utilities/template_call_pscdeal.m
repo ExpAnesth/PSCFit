@@ -3,14 +3,14 @@
 compName=lower(getenv('computername'));
 switch compName
   case {'hh-i7'}
-    dataP='d:\_data\otc_ctx\ACh\AChBlockIPSC\Ctrl-ACh-Block\';
-    plotP='d:\_data\otc_ctx\ACh\AChBlockIPSC\Ctrl-ACh-Block\Figs\';
+    dataP='d:\_data\otc_ctx\ACh\AChBlockIPSC\Mist\ACh+Dia-Zolpi\';
+    plotP='d:\_data\otc_ctx\ACh\AChBlockIPSC\Mist\ACh+Dia-Zolpi\summary&Figures';
   case {'hh64','hh-i5'}
-    dataP='e:\_data\otc_ctx\ACh\AChBlockIPSC\Ctrl-ACh-Block\';
-    plotP='e:\_data\otc_ctx\ACh\AChBlockIPSC\Ctrl-ACh-Block\Figs\';
+    dataP='e:\_data\otc_ctx\ACh\AChBlockIPSC\Mist\ACh+Dia-Zolpi\';
+    plotP='e:\_data\otc_ctx\ACh\AChBlockIPSC\Mist\ACh+Dia-Zolpi\summary&Figures';
   case {'eval-lmb'}
-    dataP='h:\_data\otc_ctx\ACh\AChBlockIPSC\Ctrl-ACh-Block\';
-    plotP='h:\_data\otc_ctx\ACh\AChBlockIPSC\Ctrl-ACh-Block\Figs\';
+    dataP='h:\_data\otc_ctx\ACh\AChBlockIPSC\Mist\ACh+Dia-Zolpi\';
+    plotP='h:\_data\otc_ctx\ACh\AChBlockIPSC\Mist\ACh+Dia-Zolpi\summary&Figures';
   otherwise
     error('machine not defined');
 end
@@ -19,7 +19,9 @@ end
 % the complete set of values of independent parameter (=concentrations)
 ds.indepPar=[0 1 2 3];
 % matching descriptors
-ds.indepParLabel={'ACh','ACh+Zol','ACh+Dia','ACh (wash)'};
+ds.indepParLabel={'ACh','AChp_Zol','AChp_Dia','ACh_wash'};
+% name suffix and extension of files produced by PSCFitgui
+ds.fnSuffix='_IPSC_res';
 
 % --- analysis parameters
 % -- value of independent parameter corresponding to control (against which
@@ -39,7 +41,7 @@ ds.plotPar(1).name='tRise';
 ds.plotPar(1).bin=[.05:.1:3]; 
 ds.plotPar(1).bin2=2.^[-3:.4:1]; 
 ds.plotPar(2).name='width';
-ds.plotPar(2).bin=[.25:.25:14]; 
+ds.plotPar(2).bin=[.25:.25:20]; 
 ds.plotPar(2).bin2=2.^[0.2:.25:4]; 
 ds.plotPar(3).name='amp';
 ds.plotPar(3).bin=[10:5:300 inf];
@@ -48,7 +50,7 @@ ds.plotPar(4).name='allAmp';
 ds.plotPar(4).bin=[10:5:300 inf];
 ds.plotPar(4).bin2=[];
 ds.plotPar(5).name='allTRise20_80';
-ds.plotPar(5).bin=[0:.05:8 inf];
+ds.plotPar(5).bin=[0:.05:5 inf];
 ds.plotPar(5).bin2=[];
 
 % -- raw data
@@ -61,6 +63,9 @@ ds.xxIntv=[nan nan];
 ds.phDo=false;
 % ** all following parameters are input parameters into function
 % phantosic.m:
+% - set to positive integer if phantosic computations are to be visualized
+% (1=each frame, 2=every second frame, ...; 0 for no visuals)
+gr.doMonitorPhantosic=1;
 % - segment length (ms)
 ds.phIntv=5000;
 % - operational method ('peak' or 'Gauss')
@@ -72,7 +77,19 @@ ds.phPolarity='neg';
 % - percentile
 ds.phPrc=15.866;
 
-% --- plot appearance 
+% --- plotting & printing
+% set to true if plots of individual experiments are to be produced
+gr.doPlot=true;
+% graphics format within which to save plot (the usual input arguments into 
+% matlab print function; set to [] for no plot)
+% gr.printas='-dpsc2';
+gr.printas='-djpeg95';
+gr.printas=[];
+% directory in which to save figures and collected results
+gr.fDir=[plotP '\hh\projects\ctx_ACh\'];
+
+% layout of figure (usual matlab choices 'tall', 'landscape', etc.)
+gr.ornt='portrait';
 % width of line plot representing data trace
 gr.lineW=.5;
 % font size (scale bar, title)
@@ -82,28 +99,14 @@ gr.scaleFac=1;
 % marker size
 gr.markSz=4;
 
-% --- layout of figure and plot
-% layout of figure (usual matlab choices 'tall', 'landscape', etc.)
-gr.ornt='tall';
-
-% --- post-plot action settings
-% graphics format within which to save plot (the usual input arguments into 
-% matlab print function; set to [] for no plot)
-% gr.printas='-dpsc2';
-gr.printas='-djpeg95';
-gr.printas=[];
-% directory to save figures in
-gr.fDir=[plotP '\hh\projects\ctx_ACh\'];
-
 % *** global variables that will accumulate results:
 % - experiments in rows
 % - independent pars in columns
 % - parameters in slices
-clear global PSCR PSCRMN PSCRVAR LISTEXP HISTMONSTER
-global PSCR PSCRMN PSCRVAR LISTEXP HISTMONSTER
+clear global PSCR PSCRMN LISTEXP HISTMONSTER
+global PSCR PSCRMN LISTEXP HISTMONSTER
 PSCR=cell([0 numel(ds.indepPar) numel(ds.pscFitPar)]);
 PSCRMN=nan([0 numel(ds.indepPar) numel(ds.pscFitPar)]);
-PSCRVAR=nan([0 numel(ds.indepPar) numel(ds.pscFitPar)]);
 HISTMONSTER=[];
 
 
@@ -175,40 +178,31 @@ depPar=pscdeal(ds,gr);
 
 
 %% AFTERMATH: quick-and dirty overview plots of averages & variability
-figName='AChBlock';
+figName='AChZolDia';
 save([gr.fDir figName]);
 
 nSp=numel(depPar);
 nCol=3;
 nRow=ceil(nSp/nCol);
 
-for h=1:1
-  if h==1
-    D=PSCRMN;
-    ext='_mn';
+figure(100), clf, orient landscape
+labelscale('fontSz',8,'scaleFac',1,'lineW',1,'markSz',5);
+for g=1:nSp
+  subplot(nRow,nCol,g)
+  if isfinite(ds.normIpVal)
+    % plot of normalized values
+    avplot(PSCRMN(:,:,g),'x',ds.indepPar,'normRow',find(ds.indepPar==ds.normIpVal),...
+      'avType','md');
   else
-    D=PSCRVAR./PSCRMN;
-    ext='_var';
+    % plot of absolute values
+    avplot(PSCRMN(:,:,g),'x',ds.indepPar,'avType','md');
+    nicexyax(10)
   end
-  figure(100+h), clf, orient landscape
-  labelscale('fontSz',8,'scaleFac',1,'lineW',1,'markSz',5);
-  for g=1:nSp
-    subplot(nRow,nCol,g)
-    if isfinite(ds.normIpVal)
-      % plot of normalized values
-      avplot(D(:,:,g),'x',ds.indepPar,'normRow',find(ds.indepPar==ds.normIpVal),...
-        'avType','md');
-    else
-      % plot of absolute values
-      avplot(D(:,:,g),'x',ds.indepPar,'avType','md');
-      nicexyax(10)
-    end
-    set(gca,'xticklabel',ds.indepParLabel);
-    set(gca,'ygrid','on');
-    title(depPar{g})
-  end
-  
-  if ~isempty(gr.printas),
-    print(gr.printas,'-r400',[gr.fDir figName ext]);
-  end
+  set(gca,'xticklabel',ds.indepParLabel);
+  set(gca,'ygrid','on');
+  title(depPar{g})
+end
+
+if ~isempty(gr.printas),
+  print(gr.printas,'-r400',[gr.fDir figName '_sumResults']);
 end

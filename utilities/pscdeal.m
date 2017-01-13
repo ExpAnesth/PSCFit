@@ -24,7 +24,7 @@ function depPar=pscdeal(ds_in,gr_in)
 % *************************************************************************
 
 % to do:
-% - general overhaul: get rid of PSCRVAR, rethink necessity of global
+% - general overhaul: rethink necessity of global
 % variables (persistent var? store in userdata?), computation of 2D
 % histograms 
 % - the computation of amplitude and rise time of all detected IPSCs (i.e.
@@ -36,7 +36,7 @@ function depPar=pscdeal(ds_in,gr_in)
 % - get all parameters into ds (?)
 % - set up ds.doPlot
 
-global PSCR PSCRMN PSCRVAR LISTEXP HISTMONSTER
+global PSCR PSCRMN LISTEXP HISTMONSTER
 % -------------------------------------------------------------------------
 % ------------ PART 0: define defaults
 % -------------------------------------------------------------------------
@@ -45,6 +45,8 @@ global PSCR PSCRMN PSCRVAR LISTEXP HISTMONSTER
 ds.indepPar=[];
 % matching labels
 ds.indepParLabel={[]};
+% name suffix and extension of files produced by PSCFitgui
+ds.fnSuffix='';
 % --- analysis parameters
 % -- value of independent parameter corresponding to control (against which
 % others will be normalized; set to nan for no normalization)
@@ -67,6 +69,9 @@ ds.xxIntv=[nan nan];
 ds.phDo=false;
 % ** all following parameters are input parameters into function
 % phantosic.m:
+% - set to positive integer if phantosic computations are to be visualized
+% (1=each frame, 2=every second frame, ...; 0 for no visuals)
+gr.doMonitorPhantosic=0;
 % - segment length (ms)
 ds.phIntv=nan;
 % - operational method ('peak' or 'Gauss')
@@ -121,21 +126,8 @@ ds.chList={'channel name',[]};
 ds=checkFields(ds,ds_in);
 gr=checkFields(gr,gr_in);  
 
-% --- graphics
-labelscale('fontSz',gr.fontSz,'scaleFac',gr.scaleFac,'lineW',gr.lineW,'markSz',gr.markSz); 
+
 nFile=size(ds.fList,1);
-
-% main figure
-switch gr.ornt
-  case 'landscape'
-    fh1=mkfig(1,'b');
-  case 'tall'
-    fh1=mkfig(1,'v');
-end
-clf
-orient(gr.ornt);
-
-% colormap(bone)
 
 % figure name: first of file names in set & channel name(s)
 tmp=[ds.chList{:,1}];
@@ -192,6 +184,7 @@ histTemplate=nan(numel(ds.plotPar(1).bin2),numel(ds.plotPar(2).bin2));
 % -------------------------------------------------------------------------
 
 for g=1:nFile
+  disp(['processing ' ds.fList{g,1} '...']);
   % clear anything that may have remained from previous file
   clear global bu evt 
   clear fitResult fitHead head
@@ -214,7 +207,6 @@ for g=1:nFile
       LISTEXP.Properties.RowNames{rowIx}=curExpName;
       % ** preallocate
       PSCRMN(rowIx,:,1:nDepPar)=nan;
-      PSCRVAR(rowIx,:,1:nDepPar)=nan;
       [PSCR(rowIx,:,1:nDepPar)]=deal({[nan]});
       % dimensions: first par, second par, experiment, indep par value
       HISTMONSTER(1:numel(ds.plotPar(1).bin2),1:numel(ds.plotPar(2).bin2),...
@@ -222,10 +214,9 @@ for g=1:nFile
     elseif numel(rowIx)>1
       error('internal:duplicate experiments in LISTEXP');
     else
-      disp(['overwriting values for ' curExpName]);
+      disp('** overwriting values');
       % ** wipe any existing entries 
       PSCRMN(rowIx,:,1:nDepPar)=nan;
-      PSCRVAR(rowIx,:,1:nDepPar)=nan;
       [PSCR(rowIx,:,1:nDepPar)]=deal({[nan]});
       % §§§ [HISTMONSTER(1,:)]=deal({histTemplate});
     end
@@ -233,14 +224,12 @@ for g=1:nFile
   % base name of processed results file
   fnChnBase=[ds.fList{g,1} '_' deblChName];
   fn=ds.fList{g,1};
-  pscFn=([ds.dDir fnChnBase '_IPSC_res.mat']);
-  
-  % §§
-  
-  pscFn=([ds.dDir fnChnBase '_EPSC_res.mat']);
-  
+  pscFn=([ds.dDir fnChnBase ds.fnSuffix '.mat']);
   % load data (most importantly, fit results and original tsl)
   load(pscFn)
+  if ~exist('fitResult','var')
+    error('it seems that the data were not analyzed by PSCFit (variable ''fitResult'' is missing)');
+  end
   for idi=1:nPscFitPar
     switch(ds.pscFitPar{idi})
       case 'width'
@@ -285,30 +274,24 @@ for g=1:nFile
         PSCR{rowIx,colIx,idi}=fitResult.(ds.pscFitPar{idi})(end,:)';
         % copy average (=median!) of these into array
         PSCRMN(rowIx,colIx,idi)=nanmedian(fitResult.(ds.pscFitPar{idi})(end,:)');
-        PSCRVAR(rowIx,colIx,idi)=diff(prctile(fitResult.(ds.pscFitPar{idi})(end,:)',[2.5 97.5]));
       case 'tDecay'
         % pick fast, slow or weighted:
         % copy individual IPSC data into corresponding cell
         PSCR{rowIx,colIx,idi}=fitResult.(ds.pscFitPar{idi})(end,:)';
         % copy average (=median!) of these into array
         PSCRMN(rowIx,colIx,idi)=nanmedian(fitResult.(ds.pscFitPar{idi})(end,:)');
-        PSCRVAR(rowIx,colIx,idi)=diff(prctile(fitResult.(ds.pscFitPar{idi})(end,:)',[2.5 97.5]));
       otherwise
         % all other cases not requiring special treatment:
         % copy individual IPSC data into corresponding cell
         PSCR{rowIx,colIx,idi}=fitResult.(ds.pscFitPar{idi})(end,:)';
         % copy average (=median!) of these into array
         PSCRMN(rowIx,colIx,idi)=nanmedian(fitResult.(ds.pscFitPar{idi})(end,:)');
-        PSCRVAR(rowIx,colIx,idi)=diff(prctile(fitResult.(ds.pscFitPar{idi})(end,:)',[2.5 97.5]));
     end
   end
 
   % additional parameters
   for idi=1:nOtherPar
     offs=nPscFitPar;
-    % variability not defined or not requested for most of the parameters
-    % dealt with here
-    PSCRVAR(rowIx,colIx,idi+offs)=nan;
     switch otherPar{idi}
       case 'tsl'
         if exist('fitResult','var')
@@ -352,7 +335,6 @@ for g=1:nFile
           c=fitResult.amp(end,:).*fitResult.tDecay(end,:)/1000;
           PSCR{rowIx,colIx,idi+offs}=c';
           PSCRMN(rowIx,colIx,idi+offs)=nanmedian(c);
-          PSCRVAR(rowIx,colIx,idi+offs)=diff(prctile(c,[2.5 97.5]));
         end
       case 'chargePscTot'        
         % total charge transferred by PSCs (as computed on the basis of
@@ -381,7 +363,7 @@ for g=1:nFile
       % --- phantosic 
       nPts=ds.phIntv/(si/1e3);
       [base,dev,phas,gof]=phantosic(d,nPts,ds.phBin,'method',ds.phMethod,...
-        'polarity',ds.phPolarity,'prc',ds.phPrc,'frame',0,'pau',1);
+        'polarity',ds.phPolarity,'prc',ds.phPrc,'frame',gr.doMonitorPhantosic,'pau',1);
       
       % --- peak and rise time
       % this is a version of the peak detection algorithm derived from the
@@ -484,9 +466,6 @@ for g=1:nFile
    %%% embed phantosic and other params
    for idi=1:nPhPar
     offs=nPscFitPar+nOtherPar;
-    % variability not defined or not requested for the parameters dealt
-    % with here
-    PSCRVAR(rowIx,colIx,idi+offs)=nan;
     switch phPar{idi}
       case 'baseline'
         % baseline for recording
@@ -535,10 +514,27 @@ end
 
 % currently, if ds.printas is empty, don't plot
 if gr.doPlot
+  % restrict to parameters available
+  pars=intersect({ds.plotPar.name},depPar,'stable');
+  nPars=numel(pars);
+
+  % main figure
+  switch gr.ornt
+    case {'landscape','portrait'}
+      fh1=mkfig(1,'b');
+      nPlotCols=3;
+      nPlotRows=max(2,ceil(nPars/nPlotCols));
+    case 'tall'
+      fh1=mkfig(1,'v');
+      nPlotCols=2;
+      nPlotRows=max(3,ceil(nPars/nPlotCols));
+  end
+  clf
+  orient(gr.ornt);
   
   % 1. -------- univariate cumulative histograms of IPSC parameters ---------
-  figure(fh1); clf,
-  set(gcf,'defaultlinelinewidth',1.5);
+  set(gcf,'defaultlinelinewidth',2.5);
+  set(gcf,'defaultaxesFontsize',10);
   % colors to be used for display of several histograms
   stairsCm=[...
     .9       0      0;...
@@ -549,11 +545,9 @@ if gr.doPlot
     0.0100    0.3162    0.3162;...
     ];
   stairsCm=repmat(stairsCm,[ceil(nIndepPar/size(stairsCm,1)) 1]);
-  pars={ds.plotPar.name};
-  nPars=numel(pars);
   
   for parIx=1:nPars
-    hsp=subplot(max(3,nPars),1,parIx);
+    hsp=subplot(nPlotRows,nPlotCols,parIx);
     hold on
     % ** rowIx has been computed above and can still be used
     for g=1:nFile
@@ -563,18 +557,16 @@ if gr.doPlot
       helpIx=strcmp(depPar,pars{parIx});
       n=PSCR{rowIx,colIx,helpIx};
       hh=histc(n,ds.plotPar(parIx).bin);
-      % ** normalize to number of events
-      hh_norm=hh/sum(hh);
-      hs=stairs(ds.plotPar(parIx).bin,hh_norm);
-      set(hs,'Color',stairsCm(g,:));
+      hs=stairs(ds.plotPar(parIx).bin,hh);
+      % set(hs,'Color',stairsCm(g,:));
     end
     grid on
-    axis([ds.plotPar(parIx).bin([1 end]) -.05 1.05])
+    axis tight
     xlabel(ds.plotPar(parIx).name);
-    ylabel('N (norm.)');
+    ylabel('N');
   end
   
-  legend(ds.indepParLabel);
+  legend(ds.indepParLabel,'Interpreter','none');
   
   if ~isempty(gr.printas),
     print(gr.printas,'-r400',[gr.fDir figName '_hist']);
