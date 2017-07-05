@@ -1,3 +1,6 @@
+% This is the template of a script calling function analysis_IPSC_mvar;
+% it is currently used for analysis of ACh data as both function and
+% calling script are under development
 %% -------------------- PREPARATIONS --------------------------------------
 compName=lower(getenv('computername'));
 switch compName

@@ -1,10 +1,18 @@
-% a collection of various plots of IPSC parameters  - pscdeal must have run
-% before and global variables PSCRMN and PSCR containing the values as well
-% as struct ds and variable depPar must exist
+% This is a collection of various analyses and plots of PSCs - mostly of
+% extracted parameters, but also of raw PSCs.
+% To run it, either load the PSCdeal results file or run pscdeal (variables
+% PSCRMN, PSCR, ds and depPar must exist)
+
+%% plot of raw PSCs fulfilling certain criteria
+
+labelscale('fontSz',16,'scaleFac',.5,'lineW',2,'markSz',8); 
+figure(1), 
+clf
+hold on
 
 %% plot of single parameter vs drug application
 labelscale('fontSz',16,'scaleFac',.5,'lineW',2,'markSz',8); 
-figure(10), 
+figure(1), 
 clf
 hold on
 
