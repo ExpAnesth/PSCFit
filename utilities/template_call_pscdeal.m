@@ -20,7 +20,7 @@ end
 ds.indepPar=[0 1 2 3];
 % matching descriptors
 ds.indepParLabel={'ACh','AChp_Zol','AChp_Dia','ACh_wash'};
-% name suffix and extension of files produced by PSCFitgui
+% name suffix and extension of files produced by threshdetgui/PSCFitgui
 ds.fnSuffix='_IPSC_res';
 
 % --- analysis parameters
@@ -31,12 +31,44 @@ ds.normIpVal=nan;
 % be (statistically) COMPARED
 ds.compIpVal=1;
 
-% -- data resulting from pscfitgui
-% all fields of struct fitResult to be analyzed (take a look at variable
-% fitResult to obtain a complete list)
-ds.pscFitPar={'tRise','tDecay','width','amp'};
+% -- parameters of **fitted** PSCs as computed in pscfitgui (or which can
+% be derived from them)
+ds.pscFitPar={...
+  'tRise',...           % 10-90 % rise time (ms)
+  'tDecay',...          % decay time (ms)
+  'width',...           % width (ms)
+  'amp',...             % peak amplitude (same unit as in raw recording; as determined from fit)
+  'aPeak',...           % peak amplitude (same unit as in raw recording; as determined in raw cutouts)  
+  'chargePPsc',...      % charge transferred per PSC (pC)
+  'chargePscTot',...    % total charge transferred (same unit as in raw recording)
+  'xIntvFitEnd',...     % right border of fit interval (ms)
+  'qFit',...            % quality of fit (currently, R^2)
+  'freqFit',...         % frequency (Hz; see parameter allFreq below)
+  'tsl'...              % time stamps of detected PSCs that could be fitted
+  };
 
-% -- parameters to be plotted
+% -- parameters to be computed from raw data and/or time stamp lists of
+% PSCs: the prefix 'all' implies being determined from all detected (not
+% necessarily fitted) PSCs, whereas parameters lacking this suffix are
+% determined from the subset of detected and fitted PSCs
+ds.pscDetPar={...
+  'allFreq',...         % frequency of detected PSCs (Hz; as determined in threshdetgui)
+  'allTsl',...          % time stamps of detected PSCs (ms; as determined in threshdetgui)
+  'allAmp',...          % peak amplitude of PSCs (same unit as in raw recording; extracted in pscdeal from raw data)
+  'allTRise20_80',...   % 20-80 % (!) rise time (ms; extracted in pscdeal from raw data)
+  'tRise20_80',...      % 20-80 % (!) rise time of fitted (!) IPSCs (ms; extracted in pscdeal from raw data)
+  'allCAmp'...          % peak amplitude of compound PSCs (same unit as in raw recording; as determined in threshdetgui)
+  };
+
+% -- parameters to be determined from raw data independent of detected or
+% fitted PSCs via function phantosic
+ds.rawPar={...
+  'baseline',...        % baseline (=tonic currents)
+  'noise',...           % noise of base line (difference between percentiles, see ds.phPrc)
+  'chargePhas'...       % total charge transferred by phasic currents
+  };
+
+% -- parameters to be plotted for each experiment
 ds.plotPar(1).name='tRise';
 ds.plotPar(1).bin=[.05:.1:3]; 
 ds.plotPar(1).bin2=2.^[-3:.4:1]; 
@@ -57,19 +89,16 @@ ds.plotPar(5).name='allTRise20_80';
 ds.plotPar(5).bin=[0:.05:5 inf];
 ds.plotPar(5).bin2=[];
 
-% -- raw data
+% --- settings for raw data analyses
 % target sampling freq (Hz)
 ds.sampFreq=10000;
-% interval for xx (ms) (not yet used)
-ds.xxIntv=[nan nan];
-% if true, analysis of phasic and tonic currents independent of PSC
-% detection will be run (via phantosic.m)
-ds.phDo=false;
-% ** all following parameters are input parameters into function
-% phantosic.m:
+% corner frequency of lowpass filter (set to [] for no filtering)
+ds.loCFreq=3000;
+% --- analysis of phasic and tonic currents independent of PSC detection
+% and fitting (input parameters into function phantosic):
 % - set to positive integer if phantosic computations are to be visualized
 % (1=each frame, 2=every second frame, ...; 0 for no visuals)
-gr.doMonitorPhantosic=1;
+gr.doMonitorPhantosic=4;
 % - segment length (ms)
 ds.phIntv=5000;
 % - operational method ('peak' or 'Gauss')
