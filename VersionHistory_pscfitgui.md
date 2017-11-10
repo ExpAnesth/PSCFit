@@ -28,4 +28,4 @@ First version of PSCFitGui
 - internal limit of slow decay component (ap.maxSlowDecay) set from 500 ms to 100 ms  
 - numerous small fixes of code following code analyzer report  
 - added utility functions, among them analysis_PSC_mSeries.m
-- /utilities/pscdeal.m seriously renovated: i) global variables are gone, instead data are stored in userdata of a control GUI; ii) reorganized parameters to be analyzed into three categories (from fitted PSCs, from raw data and tsl, from raw data only) and restructured and added code accordingly
+- /utilities/pscdeal.m seriously renovated: i) global variables are gone, instead data are stored in userdata of a control GUI; ii) introduced new parameters, iii) reorganized parameters to be analyzed into three categories (from fitted PSCs, from raw data and tsl, from raw data only) and restructured and added code accordingly

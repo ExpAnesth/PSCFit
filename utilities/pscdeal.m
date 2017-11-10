@@ -398,6 +398,12 @@ for g=1:nFile
       case 'allCAmp'
         ud.pscr{rowIx,colIx,idi+offs}=evt.amp{1};
         ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(evt.amp{1});
+      case 'allCTRise'
+        ud.pscr{rowIx,colIx,idi+offs}=evt.tRise{1};
+        ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(evt.tRise{1});
+      case 'thresh'
+        ud.pscr{rowIx,colIx,idi+offs}=head.ap.thresh;
+        ud.pscrMn(rowIx,colIx,idi+offs)=head.ap.thresh;
       otherwise
         error('bad pscDet par');
     end

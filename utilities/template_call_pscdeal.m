@@ -15,6 +15,8 @@ switch compName
     error('machine not defined');
 end
 
+% name of *.mat file into which to write results
+resultFn='AChZolDia';
 % --- data set descriptors
 % the complete set of values of independent parameter (=concentrations)
 ds.indepPar=[0 1 2 3];
@@ -57,7 +59,9 @@ ds.pscDetPar={...
   'allAmp',...          % peak amplitude of PSCs (same unit as in raw recording; extracted in pscdeal from raw data)
   'allTRise20_80',...   % 20-80 % (!) rise time (ms; extracted in pscdeal from raw data)
   'tRise20_80',...      % 20-80 % (!) rise time of fitted (!) IPSCs (ms; extracted in pscdeal from raw data)
-  'allCAmp'...          % peak amplitude of compound PSCs (same unit as in raw recording; as determined in threshdetgui)
+  'allCAmp',...         % peak amplitude of compound PSCs (same unit as in raw recording; as determined in threshdetgui via detPSCAmp)
+  'allCTRise',...       % rise time of compound PSCs (ms; as determined in threshdetgui via detPSCAmp)  
+  'thresh'...           % threshold used for detection of PSCs
   };
 
 % -- parameters to be determined from raw data independent of detected or
@@ -201,7 +205,6 @@ pscdeal(ds,gr);
 
 
 %% save results
-resultFn='AChZolDia';
 % - retrieve results from figure and save
 masterFh=findobj('name','pscdeal master figure','type','figure');
 r=get(masterFh,'userdata');
@@ -217,6 +220,10 @@ save([gr.fDir resultFn],'r','PSCR','PSCRMN','HISTMONSTER','LISTEXP','depPar');
 close(masterFh);
 
 %% simple summary plots
+% load data should they have been cleared in the interim
+if ~exist('r','var')
+  load([gr.fDir resultFn],'r');
+end
 nSp=numel(r.depPar);
 nCol=3;
 nRow=ceil(nSp/nCol);
@@ -234,7 +241,7 @@ for g=1:nSp
   subplot(nRow,nCol,g)
   if isfinite(ds.normIpVal)
     % plot of normalized values
-    avplot(r.pscrMn(:,:,g),'x',ds.indepPar,'normRow',find(ds.in==ds.normIpVal),...
+    avplot(r.pscrMn(:,:,g),'x',ds.indepPar,'normRow',find(ds.indepPar==ds.normIpVal),...
       'avType','md');
   else
     % plot of absolute values
