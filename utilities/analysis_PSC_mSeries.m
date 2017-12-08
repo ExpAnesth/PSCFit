@@ -25,6 +25,8 @@ function [dCell1way,gCell1way,dCell2way,gCell2way]=analysis_PSC_mSeries(dataPath
 %
 %
 
+% --- work in progress ---
+
 nDs=size(dataSet,1);
 nPar=size(fullPSCPar,1);
 
@@ -40,13 +42,23 @@ gCellBoxplot=cell(nPar,1);
 
 % ------ load & organize data ------
 for g=1:nDs
-  load([dataPath dataSet{g,1}], 'PSCRMN','depPar','LISTEXP');
+  % load results, differentiating between old (individual variables) and
+  % new (struct r) styles
+  v=whos('-file',[dataPath dataSet{g,1}]);
+  if ~isempty(intersect(v.name,'r')) && strcmp(v.class,'struct')
+    load([dataPath dataSet{g,1}], 'r');
+  else
+    load([dataPath dataSet{g,1}], 'PSCRMN','depPar');
+    % make fields of r
+    r=struct('pscrMn',PSCRMN,'depPar',depPar);
+    clear PSCRMN depPar
+  end
   indepParIx=dataSet{g,2};
   
   for pIx=1:nPar
     
-    parIx=strcmp(fullPSCPar{pIx,1},depPar);
-    d=abs(PSCRMN(:,indepParIx,parIx));
+    parIx=strcmp(fullPSCPar{pIx,1},r.depPar);
+    d=abs(r.pscrMn(:,indepParIx,parIx));
     
     % - kick all with any nan in first two columns
     d=d(all(isfinite(d(:,[1 2])),2),:);
