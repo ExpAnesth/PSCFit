@@ -27,9 +27,9 @@ function ud=pscdeal(ds_in,gr_in)
 % - update computation of 2D histograms
 % - get all parameters into ds (?)
 
-% -------------------------------------------------------------------------
-% ------------ PART 1: check input, adjust parameters, preparations
-% -------------------------------------------------------------------------
+% =========================================================================
+%          PART 1: check input, adjust parameters, preparations
+% =========================================================================
 [ds,gr]=pscdeal_defaultParams;
 ds=checkFields(ds,ds_in);
 gr=checkFields(gr,gr_in);
@@ -43,23 +43,26 @@ figName=[ds.fList{1,1} '_' tmp(~isspace(tmp))];
 nIndepPar=numel(ds.indepPar);
 nPscFitPar=numel(ds.pscFitPar);
 nPscDetPar=numel(ds.pscDetPar);
+nCPscDetPar=numel(ds.cPscDetPar);
 nRawPar=numel(ds.rawPar);
 
 % so, total set of dependent parameters: the ones listed in ds.pscFitPar
-% first, then ds.pscDetPars, then raw pars
-depPar=cat(2,ds.pscFitPar,ds.pscDetPar,ds.rawPar);
+% first, then ds.pscDetPars, then ds.cPscDetPars, then raw pars
+depPar=cat(2,ds.pscFitPar,ds.pscDetPar,ds.cPscDetPar,ds.rawPar);
 nDepPar=numel(depPar);
 
 % find out whether any of the requested parameters requires upload of raw
 % data
 if any(ismember(depPar,{'allAmp','allTRise20_80','tRise20_80',...
+    'allCAmp','allCTRise','allCTRise20_80',...
     'baseline','noise','chargePhas'}))
   doReadRawData=true;
 else
   doReadRawData=false;
 end
-% find out whether any of the results of or parameters specific to
-% pscfitgui are required
+% 'allAmp','allTRise20_80','tRise20_80' are computed in a manner identical
+% to that in pscfitgui, so we need analysis parameters (base line window
+% etc.) as used in pscfitgui
 if nPscFitPar>0 || any(ismember(depPar,{'allAmp','allTRise20_80','tRise20_80'})) 
   doNeedFitResults=true;
 else
@@ -79,6 +82,15 @@ end
 % bivariate histogram template
 if doBivarHistogram
   histTemplate=nan(numel(ds.plotPar(1).bin2),numel(ds.plotPar(2).bin2));
+end
+
+switch gr.visualAmpDet
+  case 'none' 
+    doMonitorAmpDet=false;
+  case {'pause','waitfor'}
+    doMonitorAmpDet=true;
+  otherwise
+    error('bad value for gr.visualAmpDet')
 end
 
 % find/set up master figure
@@ -106,11 +118,13 @@ else
   listH=findall(masterFh,'tag','listexp');
 end
 
-% -------------------------------------------------------------------------
-% ------------ PART 2: loop over files & load and process data
-% -------------------------------------------------------------------------
+% =========================================================================
+%            PART 2: loop over files & load and process data
+% =========================================================================
 
 for g=1:nFile
+  disp(' ');
+  disp('------------------------------------------------------------------------------')
   disp(['processing ' ds.fList{g,1} '...']);
   % clear anything that may have remained from previous file
   clear global bu evt
@@ -160,7 +174,9 @@ for g=1:nFile
   if doNeedFitResults && ~existFitResult
     error('Fit parameters are requested, but current data were not analyzed by PSCFit');
   end
-  % ----- collect/compute parameters of fitted PSCs -----------------------
+  % -----------------------------------------------------------------------  
+  %             collect/compute parameters of fitted PSCs 
+  % -----------------------------------------------------------------------
   disp('collecting & computing parameters of fitted PSCs...')
   for idi=1:nPscFitPar
     switch(ds.pscFitPar{idi})
@@ -259,32 +275,41 @@ for g=1:nFile
     end
   end
   
-  % ----- read raw data if required ---------------------------------------
+  % -----------------------------------------------------------------------
+  %                  read raw data if required 
+  % -----------------------------------------------------------------------
   if doReadRawData
     % raw data
     rawFn=[ds.dDir '\' fn '.abf'];
     if exist(rawFn,'file')
       [d,si]=abfload(rawFn,'channels',ds.chList(:,1)');
-      % lowpass filter?
-      if exist('fitHead','var')
-        loCFreq=determineLoCFreq(ds,fitHead);
-      else
-        loCFreq=determineLoCFreq(ds);
-      end
-      if ~isempty(loCFreq)
-        d=lofi(d,si,loCFreq);
-      end
     else
       warning([rawFn ' does not exist']);
     end
   end
   
-  disp('collecting & computing parameters of detected PSCs...')  
-  % ----- collect/compute parameters of detected PSCs ---------------------
+  % -----------------------------------------------------------------------
+  % collect parameters of detected PSCs and compute amplitudes and rise
+  % times of from raw data, pscfitgui-style
+  % -----------------------------------------------------------------------
+  % loCFreq is the corner frequency of the lowpass which d is run through
+  % to yield loD, which may be used further below
+  loCFreq=[];
   if any(ismember(depPar,{'allAmp','allTRise20_80','tRise20_80'}))
-    % this is a version of the peak detection algorithm derived from the
-    % one in pscfitguifunc and mostly identical with it
-    smoothD=sgolayfilt(d,fitHead.ap.smoothPolyOrder,fitHead.wp.smoothTSpan_pts);
+    disp('computing amplitudes and tRise of detected PSCs (pscfitgui algorithm)...')
+    % set filter frequency as used in pscfitgui, otherwise set 'global'
+    % freq
+    if isfield(fitHead.ap,'loCFreq') && isfinite(fitHead.ap.loCFreq)
+      loCFreq=fitHead.ap.loCFreq;
+    else
+      loCFreq=ds.loCFreq;
+    end
+    if ~isempty(loCFreq)
+      loD=lofi(d,si,loCFreq);
+    else
+      loD=d;
+    end
+    smoothD=sgolayfilt(loD,fitHead.ap.smoothPolyOrder,fitHead.wp.smoothTSpan_pts);
     % generate cutouts: beginning of base line interval to end of
     % peak det interval
     [cutout,isCutout]=tsl2exc(smoothD,si,evt.tsl,'win',[fitHead.ap.xIntvBaseLine(1) fitHead.ap.xIntvPeak(2)]);
@@ -373,65 +398,150 @@ for g=1:nFile
       % tRise is fine
     end
   end
-  % embed parameters computed above
+  % embed parameters, some of them possibly computed above
   for idi=1:nPscDetPar
-    offs=nPscFitPar;
+    sliceIx=strcmp(ds.pscDetPar{idi},depPar);
     switch ds.pscDetPar{idi}
       case 'allFreq'
         % frequency of detected (not necessarily fitted) PSCs in Hz
         f=numel(evt.tsl{1})/diff(head.ds.fileInfo.recTime);
-        ud.pscr{rowIx,colIx,idi+offs}=f;
-        ud.pscrMn(rowIx,colIx,idi+offs)=f;
+        ud.pscr{rowIx,colIx,sliceIx}=f;
+        ud.pscrMn(rowIx,colIx,sliceIx)=f;
       case 'allTsl'
-        ud.pscr{rowIx,colIx,idi+offs}=evt.tsl{1};
-        ud.pscrMn(rowIx,colIx,idi+offs)=nan;
+        ud.pscr{rowIx,colIx,sliceIx}=evt.tsl{1};
+        ud.pscrMn(rowIx,colIx,sliceIx)=nan;
       case 'allAmp'
-        ud.pscr{rowIx,colIx,idi+offs}=maxPeak;
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(maxPeak);
+        ud.pscr{rowIx,colIx,sliceIx}=maxPeak;
+        ud.pscrMn(rowIx,colIx,sliceIx)=nanmedian(maxPeak);
       case 'allTRise20_80'
-        ud.pscr{rowIx,colIx,idi+offs}=tRise;
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(tRise);
+        ud.pscr{rowIx,colIx,sliceIx}=tRise;
+        ud.pscrMn(rowIx,colIx,sliceIx)=nanmedian(tRise);
       case 'tRise20_80'
         % rise time of identified PSCs (see above) 
-        ud.pscr{rowIx,colIx,idi+offs}=tRise(fitTsIx);
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(tRise(fitTsIx));
-      case 'allCAmp'
-        ud.pscr{rowIx,colIx,idi+offs}=evt.amp{1};
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(evt.amp{1});
-      case 'allCTRise'
-        ud.pscr{rowIx,colIx,idi+offs}=evt.tRise{1};
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmedian(evt.tRise{1});
+        ud.pscr{rowIx,colIx,sliceIx}=tRise(fitTsIx);
+        ud.pscrMn(rowIx,colIx,sliceIx)=nanmedian(tRise(fitTsIx));
       case 'thresh'
-        ud.pscr{rowIx,colIx,idi+offs}=head.ap.thresh;
-        ud.pscrMn(rowIx,colIx,idi+offs)=head.ap.thresh;
+        ud.pscr{rowIx,colIx,sliceIx}=head.ap.thresh;
+        ud.pscrMn(rowIx,colIx,sliceIx)=head.ap.thresh;
       otherwise
         error('bad pscDet par');
     end
   end
   
-  % ----- collect/compute parameters from raw data ------------------------
-  disp('collecting & computing parameters from raw data...')  
+  % -----------------------------------------------------------------------
+  % compute amplitudes and rise times of detected PSCs from raw data via
+  % algorithm designed for compound PSCs
+  % -----------------------------------------------------------------------  
+  if any(ismember(depPar,{'allCAmp','allCTRise','allCTRise20_80'}))
+    disp('computing amplitudes and tRise of detected PSCs (''compound'' PSC algorithm)...')
+    cAmpDetFh=findobj('Tag','evAmpFigure','type','figure');
+    % initialize figure
+    if doMonitorAmpDet
+      if isempty(cAmpDetFh)
+        cAmpDetFh=figure('Units','normalized', ...
+          'Name','PSC Amplitude Plot', ...
+          'NumberTitle','off', ...
+          'Position',[0.005 0.33 0.99 0.35], ...
+          'Tag','evAmpFigure'...
+          );
+      else
+        figure(cAmpDetFh);
+        cla
+      end
+    end
+    
+    % §§ insert code here extracting values for filter parameters into
+    % differfi.m from head.ap.customCommand (or other field(s) in the
+    % future) if the filter parameters as listed in the caller script are
+    % not empty
+    
+    % lowpass filter as set in threshdetgui (** note that if data had not
+    % been lowpass filtered in threshdetgui they won't be filtered here
+    % because edge frequencies which are too close to ds.differfi.stopbf
+    % are detrimental to the PSC detection algorithm in detPSCAmp.m)
+    if ~isempty(head.ap.loCFreq) && isfinite(head.ap.loCFreq)
+      if ~isequal(head.ap.loCFreq,loCFreq)
+        % overwrite variables
+        loCFreq=head.ap.loCFreq;
+        loD=lofi(d,si,loCFreq);
+      end
+    else 
+      loD=d;
+    end
+    % differentiator filter
+    diffD=differfi(loD,si,ds.differfi.fo,ds.differfi.passbf,ds.differfi.stopbf,'doScale',true);
+    % convert crucial parameters to points
+    tslPts=cont2discrete(evt.tsl{1},si/1e3);
+    winEvtCutoutPts=cont2discrete(head.ap.winEvtCutout,si/1e3,'intv',1);
+    % create cutouts from data
+    evtCutout=tsl2exc(loD,'idx',{tslPts},'win',winEvtCutoutPts);
+    % create cutouts from differentated data
+    diffEvtCutout=tsl2exc(diffD,'idx',{tslPts},'win',winEvtCutoutPts);
+    % call detPSCAmp
+    [amp,tRise]=detPSCAmp(evtCutout,diffEvtCutout,1-winEvtCutoutPts(1),...
+      si,tslPts,'d',loD,'thresh',head.ap.thresh,'fh',cAmpDetFh,...
+      'nPlotEv',min(1000,numel(tslPts))*double(doMonitorAmpDet),...
+      'plotOverview',doMonitorAmpDet);
+    
+    % embed parameters computed above
+    for idi=1:nCPscDetPar
+      sliceIx=strcmp(ds.cPscDetPar{idi},depPar);
+      switch ds.cPscDetPar{idi}
+        case 'allCAmp'
+          ud.pscr{rowIx,colIx,sliceIx}=amp;
+          ud.pscrMn(rowIx,colIx,sliceIx)=nanmedian(amp);
+        case 'allCTRise'
+          ud.pscr{rowIx,colIx,sliceIx}=tRise(:,1);
+          ud.pscrMn(rowIx,colIx,sliceIx)=nanmedian(tRise(:,1));
+        case 'allCTRise20_80'
+          ud.pscr{rowIx,colIx,sliceIx}=tRise(:,2);
+          ud.pscrMn(rowIx,colIx,sliceIx)=nanmedian(tRise(:,2));
+        otherwise
+          error('bad cPscDet par');
+      end
+    end
+    if doMonitorAmpDet
+      switch gr.visualAmpDet
+        case 'pause'
+          pause(1)
+          close(cAmpDetFh)
+        case 'waitfor'
+          waitfor(cAmpDetFh)
+      end
+    end
+  end
+  
+  % -----------------------------------------------------------------------
+  %          collect/compute phantosic parameters from raw data 
+  % -----------------------------------------------------------------------  
+  disp('collecting & computing PSC detection-independent parameters from raw data (''phantosic'')...')  
+  if ~isempty(ds.loCFreq) && isfinite(ds.loCFreq)
+    if ~isequal(ds.loCFreq,loCFreq)
+      loCFreq=ds.loCFreq;
+      loD=lofi(d,si,loCFreq);
+    end
+  end
   if any(ismember(depPar,{'baseline','noise','chargePhas'}))
     nPts=ds.phIntv/(si/1e3);
-    [base,dev,phas]=phantosic(d,nPts,ds.phBin,'method',ds.phMethod,...
+    [base,dev,phas]=phantosic(loD,nPts,ds.phBin,'method',ds.phMethod,...
       'polarity',ds.phPolarity,'prc',ds.phPrc,'frame',gr.doMonitorPhantosic,'pau',1);
   end
   % embed phantosic parameters computed above
   for idi=1:nRawPar
-    offs=nPscFitPar+nPscDetPar;
+    sliceIx=strcmp(ds.rawPar{idi},depPar);
     switch ds.rawPar{idi}
       case 'baseline'
         % baseline for recording
-        ud.pscr{rowIx,colIx,idi+offs}=base;
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmean(base);
+        ud.pscr{rowIx,colIx,sliceIx}=base;
+        ud.pscrMn(rowIx,colIx,sliceIx)=nanmean(base);
       case 'noise'
         % deviation from baseline (noise)
-        ud.pscr{rowIx,colIx,idi+offs}=dev;
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmean(dev);
+        ud.pscr{rowIx,colIx,sliceIx}=dev;
+        ud.pscrMn(rowIx,colIx,sliceIx)=nanmean(dev);
       case 'chargePhas'
         % phasic current
-        ud.pscr{rowIx,colIx,idi+offs}=phas;
-        ud.pscrMn(rowIx,colIx,idi+offs)=nanmean(phas);
+        ud.pscr{rowIx,colIx,sliceIx}=phas;
+        ud.pscrMn(rowIx,colIx,sliceIx)=nanmean(phas);
       otherwise
         error('bad derived raw par');
     end
@@ -454,10 +564,9 @@ figure(masterFh);
 set(listH,'string',char(ud.listExp));
 drawnow
 
-% -------------------------------------------------------------------------
-% ------------ PART 3: plot data
-% -------------------------------------------------------------------------
-
+% =========================================================================
+%                         PART 3: plot data
+% =========================================================================
 % currently, if ds.printas is empty, don't plot
 if gr.doPlot
   disp('plotting...')
@@ -479,22 +588,12 @@ if gr.doPlot
   clf
   orient(gr.ornt);
   
-  % 1. -------- univariate cumulative histograms of IPSC parameters ---------
+  % 1. -------- univariate histograms of IPSC parameters ---------
   set(gcf,'defaultlinelinewidth',2.5);
   set(gcf,'defaultaxesFontsize',10);
-  % colors to be used for display of several histograms
-  stairsCm=[...
-    .9       0      0;...
-    0       0      0;...
-    0.0667    0.2582    0.8165;...
-    0       .8      0;...
-    .7        0         .7;...
-    0.0100    0.3162    0.3162;...
-    ];
-  stairsCm=repmat(stairsCm,[ceil(nIndepPar/size(stairsCm,1)) 1]);
   
   for parIx=1:nPars
-    hsp=subplot(nPlotRows,nPlotCols,parIx);
+    subplot(nPlotRows,nPlotCols,parIx);
     hold on
     % ** rowIx has been computed above and can still be used
     for g=1:nFile
@@ -504,8 +603,7 @@ if gr.doPlot
       helpIx=strcmp(depPar,pars{parIx});
       n=ud.pscr{rowIx,colIx,helpIx};
       hh=histc(n,ds.plotPar(parIx).bin);
-      hs=plot(ds.plotPar(parIx).bin,hh);
-      % set(hs,'Color',stairsCm(g,:));
+      plot(ds.plotPar(parIx).bin,hh);
     end
     grid on
     axis tight
@@ -531,10 +629,8 @@ if gr.doPlot
     nCol=numel(ds.indepPar);
     % local normalization to number of PSCs?
     doNormalize=false;
-    
     % ** rowIx=index for current experiment into global results variable; has
     % been computed above and can still be used
-    
     % start by pulling out control histogram
     compColIx=find(ds.indepPar==ds.compIpVal);
     % pull out histogram
@@ -544,7 +640,7 @@ if gr.doPlot
       compHist=compHist/sum(compHist(:));
     end
     
-    sph=nan(2,nFile);
+    sph=gobjects(2,nFile);
     for g=1:nFile
       % index into column of global results variable ud.pscr
       colIx=ds.indepPar==ds.fList{g,2};
@@ -564,7 +660,7 @@ if gr.doPlot
       grid on
       xlabel(ds.plotPar(1).name);
       ylabel(ds.plotPar(2).name);
-      title(ds.indepParLabel{g});
+      title(ds.indepParLabel{g},'Interpreter','none');
       % plot difference
       sph(2,g)=subplot(nRow,nCol,nCol+g);
       axis off
@@ -617,9 +713,11 @@ end
 filterCase='';
 loCFreq=[];
 if ~isempty(fitHead) && isfield(fitHead.ap,'loCFreq') && isfinite(fitHead.ap.loCFreq)
+  % data were filtered in pscfitgui
   filterCase=[filterCase '_pscfitgui'];
 end
 if ~isempty(ds.loCFreq) && isfinite(ds.loCFreq)
+  % data were filtered by program in which PSCs were detected
   filterCase=[filterCase '_caller'];
 end
 switch filterCase
@@ -628,16 +726,15 @@ switch filterCase
   case '_caller'
     loCFreq=ds.loCFreq;
   case '_pscfitgui_caller'
-    % frequency set in caller script has precedence, but warn
-    loCFreq=ds.loCFreq;
+    % frequency set in pscfitgui has precedence, but warn
+    loCFreq=fitHead.ap.loCFreq;
     if ~isequal(fitHead.ap.loCFreq,ds.loCFreq)
       warndlg({'divergent lowpass corner frequencies:',...
         ['fitHead.ap.loCFreq=' num2str(fitHead.ap.loCFreq) 'Hz'],...
         ['ds.loCFreq=' num2str(ds.loCFreq) 'Hz'],...
-        'setting to the latter'});
+        'setting to the former'});
     end
 end
-
 
 function [ds,gr]=pscdeal_defaultParams
   % --- data set descriptors
@@ -657,11 +754,16 @@ ds.compIpVal=[];
 % -- parameters computed in pscfitgui (or which can be derived from them)
 % to be collected and analyzed
 ds.pscFitPar={''};
-% -- parameters to be computed from raw data and PSC time stamp lists
-% (the prefix 'all' implies being determined from all detected PSCs,
-% whereas parameters lacking this suffix are determined from detected and
-% fitted PSCs)
+% -- parameters to be computed from raw data and time stamp lists of PSCs
+% using algorithms as used in pscfitgui: the prefix 'all' implies being
+% determined from all detected (not necessarily fitted) PSCs, whereas
+% parameters lacking this suffix are determined from the subset of detected
+% AND fitted PSCs
 ds.pscDetPar={''};
+% -- parameters to be computed from raw data and time stamp lists of PSCs
+% via algorithm geared towards dealing with compound PSCs (occurring in
+% bursts with at least partly overlapping rise times):
+ds.cPscDetPar={''};
 % -- parameters to be determined from raw data only (i.e., independent of
 % detected or fitted PSCs)
 ds.rawPar={''};
@@ -672,8 +774,16 @@ ds.plotPar=[];
 ds.sampFreq=nan;
 % corner frequency of lowpass filter (set to [] for no filtering)
 ds.loCFreq=nan;
-% interval for xx (ms) (not yet used)
-ds.xxIntv=[nan nan];
+% settings for differentiator filter
+% - filter order
+ds.differfi.fo=30;
+% - lower end of passband (Hz)
+ds.differfi.passbf=40;
+% - lower end of stopband (Hz, must be substantially higher than
+% ds.loCFreq)
+ds.differfi.stopbf=3000;
+% control PSC amplitude det visualization 
+gr.visualAmpDet='none';
 % ** all following parameters are input parameters into function
 % phantosic.m:
 % - set to positive integer if phantosic computations are to be visualized

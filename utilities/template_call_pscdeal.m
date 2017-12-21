@@ -24,6 +24,7 @@ ds.indepPar=[0 1 2 3];
 ds.indepParLabel={'ACh','AChp_Zol','AChp_Dia','ACh_wash'};
 % name suffix and extension of files produced by threshdetgui/PSCFitgui
 ds.fnSuffix='_IPSC_res';
+ds.fnSuffix='_cIPSC_res';
 
 % --- analysis parameters
 % -- value of independent parameter corresponding to control (against which
@@ -40,7 +41,7 @@ ds.pscFitPar={...
   'tDecay',...          % decay time (ms)
   'width',...           % width (ms)
   'amp',...             % peak amplitude (same unit as in raw recording; as determined from fit)
-  'aPeak',...           % peak amplitude (same unit as in raw recording; as determined in raw cutouts)  
+  'aPeak',...           % peak amplitude (same unit as in raw recording; as determined in raw cutouts)
   'chargePPsc',...      % charge transferred per PSC (pC)
   'chargePscTot',...    % total charge transferred (same unit as in raw recording)
   'xIntvFitEnd',...     % right border of fit interval (ms)
@@ -49,19 +50,27 @@ ds.pscFitPar={...
   'tsl'...              % time stamps of detected PSCs that could be fitted
   };
 
-% -- parameters to be computed from raw data and/or time stamp lists of
-% PSCs: the prefix 'all' implies being determined from all detected (not
-% necessarily fitted) PSCs, whereas parameters lacking this suffix are
-% determined from the subset of detected and fitted PSCs
+% -- parameters to be computed from raw data and time stamp lists of PSCs
+% using algorithms as used in pscfitgui: the prefix 'all' implies being
+% determined from all detected (not necessarily fitted) PSCs, whereas
+% parameters lacking this suffix are determined from the subset of detected
+% AND fitted PSCs
 ds.pscDetPar={...
   'allFreq',...         % frequency of detected PSCs (Hz; as determined in threshdetgui)
   'allTsl',...          % time stamps of detected PSCs (ms; as determined in threshdetgui)
-  'allAmp',...          % peak amplitude of PSCs (same unit as in raw recording; extracted in pscdeal from raw data)
-  'allTRise20_80',...   % 20-80 % (!) rise time (ms; extracted in pscdeal from raw data)
-  'tRise20_80',...      % 20-80 % (!) rise time of fitted (!) IPSCs (ms; extracted in pscdeal from raw data)
-  'allCAmp',...         % peak amplitude of compound PSCs (same unit as in raw recording; as determined in threshdetgui via detPSCAmp)
-  'allCTRise',...       % rise time of compound PSCs (ms; as determined in threshdetgui via detPSCAmp)  
+  'allAmp',...          % peak amplitude of PSCs (same unit as in raw recording; extracted in pscdeal from raw data in a manner identical to that in PSCFitGui)
+  'allTRise20_80',...   % 20-80% (!) rise time (ms; extracted in pscdeal from raw data)
+  'tRise20_80',...      % 20-80% (!) rise time of fitted (!) IPSCs (ms; extracted in pscdeal from raw data)
   'thresh'...           % threshold used for detection of PSCs
+  };
+
+% -- parameters to be computed from raw data and time stamp lists of PSCs
+% via algorithm geared towards dealing with compound PSCs (occurring in
+% bursts with at least partly overlapping rise times):
+ds.cPscDetPar={...
+  'allCAmp',...         % peak amplitude of compound PSCs (same unit as in raw recording)
+  'allCTRise',...       % rise time of compound PSCs (ms)  
+  'allCTRise20_80',...  % same as above but 20-80%
   };
 
 % -- parameters to be determined from raw data independent of detected or
@@ -73,36 +82,61 @@ ds.rawPar={...
   };
 
 % -- parameters to be plotted for each experiment
-ds.plotPar(1).name='tRise';
-ds.plotPar(1).bin=[.05:.1:3]; 
-ds.plotPar(1).bin2=2.^[-3:.4:1]; 
+ix=0;
+% ix=ix+1;
+% ds.plotPar(ix).name='tRise';
+% ds.plotPar(ix).bin=[.05:.1:3]; 
+% ds.plotPar(ix).bin2=2.^[-3:.4:1]; 
+% ix=ix+1;
+% ds.plotPar(ix).name='width';
+% ds.plotPar(ix).bin=[.25:.25:20]; 
+% ds.plotPar(ix).bin2=2.^[0.2:.25:4]; 
+% ix=ix+1;
+% ds.plotPar(ix).name='allAmp';
+% ds.plotPar(ix).bin=[10:5:300 inf];
+% ds.plotPar(ix).bin2=[];
+% ix=ix+1;
+% ds.plotPar(ix).name='allTRise20_80';
+% ds.plotPar(ix).bin=[0:.05:5 inf];
+% ds.plotPar(ix).bin2=[];
 
-ds.plotPar(2).name='width';
-ds.plotPar(2).bin=[.25:.25:20]; 
-ds.plotPar(2).bin2=2.^[0.2:.25:4]; 
+ix=ix+1;
+ds.plotPar(ix).name='allCTRise';
+ds.plotPar(ix).bin=[0:.05:5 inf];
+ds.plotPar(ix).bin2=2.^[-3:.4:1];
+ix=ix+1;
+ds.plotPar(ix).name='allCAmp';
+ds.plotPar(ix).bin=[10:5:300 inf];
+ds.plotPar(ix).bin2=2.^(3:.5:7)
 
-ds.plotPar(3).name='amp';
-ds.plotPar(3).bin=[10:5:300 inf];
-ds.plotPar(3).bin2=2.^[4:0.3:8];
-
-ds.plotPar(4).name='allAmp';
-ds.plotPar(4).bin=[10:5:300 inf];
-ds.plotPar(4).bin2=[];
-
-ds.plotPar(5).name='allTRise20_80';
-ds.plotPar(5).bin=[0:.05:5 inf];
-ds.plotPar(5).bin2=[];
 
 % --- settings for raw data analyses
 % target sampling freq (Hz)
 ds.sampFreq=10000;
 % corner frequency of lowpass filter (set to [] for no filtering)
-ds.loCFreq=3000;
+ds.loCFreq=2000;
+% settings for differentiator filter (see differfi.m, last three input
+% args); set to [] if settings made in threshdetgui shall be applied
+% - filter order
+ds.differfi.fo=30;
+% - lower end of passband (Hz)
+ds.differfi.passbf=40;
+% - lower end of stopband (Hz, must be substantially higher than
+% ds.loCFreq)
+ds.differfi.stopbf=3000;
+% determine whether computation of PSC amplitudes shall be visualized in a
+% separate, temporary figure with interactive features, and upon which
+% condition the remaining computations shall be resumed:
+% 'none' - no visuals
+% 'pause' - computations will resume after figure has been displayed for 1 second
+% 'waitfor' - computations will resume once figure has been deleted by user
+gr.visualAmpDet='waitfor';
+
 % --- analysis of phasic and tonic currents independent of PSC detection
 % and fitting (input parameters into function phantosic):
 % - set to positive integer if phantosic computations are to be visualized
 % (1=each frame, 2=every second frame, ...; 0 for no visuals)
-gr.doMonitorPhantosic=4;
+gr.doMonitorPhantosic=0;
 % - segment length (ms)
 ds.phIntv=5000;
 % - operational method ('peak' or 'Gauss')

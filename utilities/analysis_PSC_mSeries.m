@@ -45,7 +45,7 @@ for g=1:nDs
   % load results, differentiating between old (individual variables) and
   % new (struct r) styles
   v=whos('-file',[dataPath dataSet{g,1}]);
-  if ~isempty(intersect(v.name,'r')) && strcmp(v.class,'struct')
+  if ~isempty(intersect({v.name},'r'))
     load([dataPath dataSet{g,1}], 'r');
   else
     load([dataPath dataSet{g,1}], 'PSCRMN','depPar');
