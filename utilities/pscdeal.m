@@ -449,12 +449,6 @@ for g=1:nFile
         cla
       end
     end
-    
-    % §§ insert code here extracting values for filter parameters into
-    % differfi.m from head.ap.customCommand (or other field(s) in the
-    % future) if the filter parameters as listed in the caller script are
-    % not empty
-    
     % lowpass filter as set in threshdetgui (** note that if data had not
     % been lowpass filtered in threshdetgui they won't be filtered here
     % because edge frequencies which are too close to ds.differfi.stopbf
@@ -469,7 +463,14 @@ for g=1:nFile
       loD=d;
     end
     % differentiator filter
-    diffD=differfi(loD,si,ds.differfi.fo,ds.differfi.passbf,ds.differfi.stopbf,'doScale',true);
+    if isfield('differfi',head.ap) && ~isempty(head.ap.differfi)
+      tmpArgin=eval(head.ap.differfi);
+      diffD=differfi(loD,si,tmpArgin{:});  
+    else
+      % use defaults 
+      diffD=differfi(loD,si,ds.differfi.fo,ds.differfi.passbf,ds.differfi.stopbf,...
+        'scalFac',ds.differfi.scalFac);
+    end
     % convert crucial parameters to points
     tslPts=cont2discrete(evt.tsl{1},si/1e3);
     winEvtCutoutPts=cont2discrete(head.ap.winEvtCutout,si/1e3,'intv',1);

@@ -115,8 +115,8 @@ ds.plotPar(ix).bin2=2.^(3:.5:7)
 ds.sampFreq=10000;
 % corner frequency of lowpass filter (set to [] for no filtering)
 ds.loCFreq=2000;
-% settings for differentiator filter (see differfi.m, last three input
-% args); set to [] if settings made in threshdetgui shall be applied
+% settings for differentiator filter (see differfi.m); will only apply if
+% settings were not made in threshdetgui
 % - filter order
 ds.differfi.fo=30;
 % - lower end of passband (Hz)
@@ -124,6 +124,8 @@ ds.differfi.passbf=40;
 % - lower end of stopband (Hz, must be substantially higher than
 % ds.loCFreq)
 ds.differfi.stopbf=3000;
+% scaling factor
+ds.differfi.scalFac=10;
 % determine whether computation of PSC amplitudes shall be visualized in a
 % separate, temporary figure with interactive features, and upon which
 % condition the remaining computations shall be resumed:
