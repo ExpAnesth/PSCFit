@@ -238,11 +238,13 @@ while ~done
       apFn=intersect(fieldnames(ap),uicFn);
       % same for wp
       wpFn=intersect(fieldnames(wp),uicFn);
-      % by default look for files in \PSCFit\parms
-      pfDir=mfilename('fullpath');
-      pfDir=pfDir(1:max(strfind(pfDir,'\'))-1);
-      w=what;
-      cd([pfDir '\parms']);
+      if ~isdeployed
+        % by default look for files in \PSCFit\parms
+        pfDir=mfilename('fullpath');
+        pfDir=pfDir(1:max(strfind(pfDir,'\'))-1);
+        w=what;
+        cd([pfDir '\parms']);
+      end
       [tmpOptFn,tmpOptPath] = uigetfile('*.mat','pick parameter file');
       if ischar(tmpOptFn) && ischar(tmpOptPath)
         load([tmpOptPath tmpOptFn]);
@@ -268,8 +270,10 @@ while ~done
           end
         end
       end
-      % cd back to original dir
-      cd(w.path);
+      if ~isdeployed
+        % cd back to original dir
+        cd(w.path);
+      end
       if OKFlag
         % next two jobs: check parameters and write them to gui
         job(2:end+1)=job;
@@ -371,17 +375,21 @@ while ~done
       ap_uic=rmfield(ap,setdiff(fieldnames(ap),uicFn));
       % same for wp
       wp_uic=rmfield(wp,setdiff(fieldnames(wp),uicFn));
-      % by default dump files in \PSCFit\parms
-      pfDir=mfilename('fullpath');
-      pfDir=pfDir(1:max(strfind(pfDir,'\'))-1);
-      w=what;
-      cd([pfDir '\parms']);
+      if ~isdeployed
+        % by default dump files in \PSCFit\parms
+        pfDir=mfilename('fullpath');
+        pfDir=pfDir(1:max(strfind(pfDir,'\'))-1);
+        w=what;
+        cd([pfDir '\parms']);
+      end
       [tmpDataFn,tmpDataPath] = uiputfile('*.mat');
       if ischar(tmpDataFn) && ischar(tmpDataPath)
         save([tmpDataPath tmpDataFn],'ap_uic','wp_uic');
       end
-      % cd back to original dir
-      cd(w.path);
+      if ~isdeployed
+        % cd back to original dir
+        cd(w.path);
+      end
       % delete vars
       clear w pfDir ap_uic wp_uic
       job(1)=[];

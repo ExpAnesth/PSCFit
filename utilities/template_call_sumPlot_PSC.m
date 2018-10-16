@@ -1,4 +1,5 @@
-% Template script calling function xxx which generates xxx
+% Template script calling function sumPlot_PSC which generates simple
+% collections of line plots of PSC parameters, one figure per dataSet
 
 % ---- paths, printing prefs
 compName=lower(getenv('computername'));
@@ -60,5 +61,3 @@ labelscale('fontSz',10,'scaleFac',1,'lineW',.5,'markSz',7);
 
 % call 
 sumPlot_PSC(dataPath,plotPath,dataSet,fullPSCPar,ap);
-
-

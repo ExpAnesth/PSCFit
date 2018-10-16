@@ -50,7 +50,8 @@ for g=1:nDs
   else
     load([dataPath dataSet{g,1}], 'PSCRMN','depPar');
     % make fields of r
-    r=struct('pscrMn',PSCRMN,'depPar',depPar);
+    r.pscrMn=PSCRMN;
+    r.depPar=depPar;
     clear PSCRMN depPar
   end
   indepParIx=dataSet{g,2};
