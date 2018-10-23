@@ -59,16 +59,13 @@ for g=1:nDs
   for pIx=1:nPar
     
     parIx=strcmp(fullPSCPar{pIx,1},r.depPar);
+    if ~any(parIx)
+      error(['parameter ''' fullPSCPar{pIx,1} ''' not present in data set ' dataSet{g,1}])
+    end
     d=abs(r.pscrMn(:,indepParIx,parIx));
     
     % - kick all with any nan in first two columns
     d=d(all(isfinite(d(:,[1 2])),2),:);
-    
-    %     % ** simple pairwise nonparametric comparisons:
-    %     stats=mes(d(:,1),d(:,2),'auroc','nBoot',1000);
-    %     p=ranksum(d(:,1),d(:,2));
-    %     disp([fullPSCPar{pIx,1} ': ' num2str(stats.auroc) ' [' num2str(stats.aurocCi') ']; p=' num2str(p)])
-    
     % ** collecting data for mes2way: 
     n1=size(d,1);
     % - first and second column
@@ -113,6 +110,8 @@ tmpArr=ones(nDs,1)*(1:nPar);
 x=accumarray(tmpArr(:),x,[],@mean);
 y=repmat(ap.dataLim(1)+diff(ap.dataLim)*.9,[nPar,1]);
 th=text(x,y,fullPSCPar(:,2),'HorizontalAlignment','center');
+% set y limit such that text is included
+set(gca,'ylim',[0 ap.dataLim(2)])
 
 % legend
 subplot(ap.subPlotGrid(1),ap.subPlotGrid(2),2)

@@ -5,48 +5,33 @@
 compName=lower(getenv('computername'));
 switch compName
   case {'hh-i7'}
-    dataPath='d:\hh\projects\ctx_propoSevo\data_IPSC\';
-    plotPath='d:\hh\projects\ctx_propoSevo\rawFig\';
+    dataPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
+    plotPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
   case {'hh64'}
-    dataPath='d:\hh\projects\ctx_propoSevo\data_IPSC\';
-    plotPath='d:\hh\projects\ctx_propoSevo\rawFig\';
-  case {'eval-lmb'}
-    dataPath='d:\hh\projects\ctx_propoSevo\data_IPSC\';
-    plotPath='d:\hh\projects\ctx_propoSevo\rawFig\';
+    dataPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
+    plotPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
   otherwise
     error('unknown machine')
 end
 
-
 % data set; column order:
 % 1. data file name
-% 2. indexes into PSCRMN, corresponding to drug conditions listed in
-%    ds.indepPar and ds.indepParLabel, to be compared (second will be
-%    normalized by first)
+% 2. indexes into r.pscrMn, corresponding to drug conditions listed in
+%    ds.indepPar and ds.indepParLabel, to be compared
 % 3. axis labels
 dataSet={...
-  '\IPSC_prop.mat', [2 4 5], {'ctrl','0.5 痠 prop.','wash'};...
-  '\IPSC_sevo.mat', [2 4 5], {'ctrl','70 然 sevo','wash'};...
-  '\IPSC_sevoprop.mat', [2 4 5], {'ctrl','70 然 sevo+0.5 痠 prop.','wash'};...
+  '\substanceX.mat', [1 2], {'ctrl', 'drug X (0.25 然)'};...
+  '\substanceY.mat', [1 2], {'ctrl', 'drug Y (0.5 然)'};...  
   };
 
-
-% parameters to plot, axis labels, log or lin, detected or fitted
-
-% 'tRise'    'tDecay'    'width'    'amp'    'allTsl'    'tsl'    'freq'
-% 'freqFit'    'chargePPsc' 'chargePscTot'    'baseline'    'noise'
-% 'chargePhas'    'allAmp'    'allTRise20_80'    'tRise20_80'
-
+% parameters to plot; column order: parameter name, axis label, log or lin
+% scale (see template_call_pscdeal for a full list of parameters that are
+% available)
 fullPSCPar={...
-  'freq',          'frequency (Hz)',       'log', 'detected';
-  %   'freqFit',       'frequency (Hz)',       'log', 'fitted';
-  'allAmp', 'peak amplitude (pA)',         'lin', 'detected';
-  %   'amp', 'peak amplitude (pA)',            'lin', 'fitted';
-  % 'allTRise20_80', '20-80% rise time (ms)','lin', 'detected';
-  %   'tRise20_80' , '20-80% rise time (ms)',  'lin', 'fitted' ;
-  'tDecay', '{\tau}_{decay} (ms)',         'lin', 'fitted';
-  'chargePPsc', 'charge per PSC (fC)',  'lin', 'fitted';
-  'chargePhas', 'charge/time (pA)', 'log', 'detected';
+  'allAmp', 'peak amplitude (pA)',         'lin';
+  'tDecay', '{\tau}_{decay} (ms)',         'lin';
+  'chargePPsc', 'charge per PSC (fC)',  'lin';
+  'chargePhas', 'charge/time (pA)', 'log';
   };
 nPar=size(fullPSCPar,1);
 

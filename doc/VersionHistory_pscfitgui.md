@@ -21,7 +21,7 @@ First version of PSCFitGui
 - extent of PSC to be fitted: now, a 'safety distance' to the following PSC is kept, thus ensuring that the following event's rise time is not regarded as part of the PSC  
 - strings in some buttons colored  
 
-## current version (V 2.3)
+## V 2.3
 - improved PSC peak detection: now, a peak is looked for in window ranging from (approximately) xIntvPeak(1) to the minimum of [xIntvPeak(2), time to next PSC]; this prevents peaks from being missed when two PSCs follow each other closely  
 - for more precise determination of rise time, rising flanks of IPSCs are now upsampled to 100 kHz  
 - set wp.noiseHiCFreq to 1000 Hz (previously 500 Hz)  
@@ -29,3 +29,24 @@ First version of PSCFitGui
 - numerous small fixes of code following code analyzer report  
 - added utility functions, among them analysis_PSC_mSeries.m
 - /utilities/pscdeal.m seriously renovated: i) global variables are gone, instead data are stored in userdata of a control GUI; ii) introduced new parameters, iii) reorganized parameters to be analyzed into three categories (from fitted PSCs, from raw data and tsl, from raw data only) and restructured and added code accordingly
+
+## Current version (V. 2.4)
+### General:
+* added content to readme
+* changed subdirectory name: parms -> parameterFiles
+* added .gitattributes, updated .gitignore
+* added exemplary data (subdir exampleData)
+
+### pscfitgui:
+* made code compatible with deployed (standalone) version
+* corrected version numbers
+* numerous minor bug fixes and removal of legacy code
+
+### utilities (general):
+* updated template caller scripts
+* updated collection_analysis_PSC_1par.m, analysis_PSC_mSeries.m
+* removed _o directory
+
+### utilities/phantosic:
+* improved graphics
+

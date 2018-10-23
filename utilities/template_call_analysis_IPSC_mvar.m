@@ -61,7 +61,7 @@ ds.nBoot=5000;
 % plots (values, color)
 ds.ndPrctile={2.5,[0 .8 0];97.5,[.9 .9 .2]};
 % plot?
-ds.doPlot=false;
+ds.doPlot=true;
 
 % § indices to exemplary bin
 ds.exBinIx=[15 15]; % Ctrl-ACh-Block, 2011_10_18_0065 (2nd cell)

@@ -1,27 +1,24 @@
 % Template script calling function analysis_PSC_mSeries which generates a
-% boxplot of normalized PSC parameter values for several data series; the
-% script computes statistics on the differences between the series
+% boxplot of normalized PSC parameter values for one or several data
+% series; the script also computes statistics on the differences between
+% the series
 
 % ---- paths, printing prefs
 compName=lower(getenv('computername'));
 switch compName
   case {'hh-i7'}
-    dataPath='d:\hh\projects\ctx_propoSevo\data_IPSC\';
-    plotPath='d:\hh\projects\ctx_propoSevo\rawFig\';
+    dataPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
+    plotPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
   case {'hh64'}
-    dataPath='d:\hh\projects\ctx_propoSevo\data_IPSC\';
-    plotPath='d:\hh\projects\ctx_propoSevo\rawFig\';
-  case {'eval-lmb'}
-    dataPath='d:\hh\projects\ctx_propoSevo\data_IPSC\';
-    plotPath='d:\hh\projects\ctx_propoSevo\rawFig\';
+    dataPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
+    plotPath='e:\_data\_MatlabMakeover\ipsc\results_figures\';
   otherwise
     error('unknown machine')
 end
 
-
 % data set; column order:
 % 1. data file name
-% 2. indexes into PSCRMN, corresponding to drug conditions listed in
+% 2. indexes into r.pscrMn, corresponding to drug conditions listed in
 %    ds.indepPar and ds.indepParLabel, to be compared (second will be
 %    normalized by first)
 % 3. label (to be used for legend)
@@ -29,22 +26,13 @@ end
 % 5. anything else (currently, the shortcut needed for looking up
 %    properties of the data set like associated color)
 dataSet={...
-  '\IPSC_prop.mat',     [2 4], '', nan, 'prop05';...
-  '\IPSC_sevo.mat',     [2 4], '', nan, 'sevo02';...
-  '\IPSC_sevoprop.mat', [2 4], '', nan, 'sevo02prop05';...
+  '\substanceX.mat', [1 2], 'drug X (0.25 µM)', [0 0 1], '';...
+  '\substanceY.mat', [1 2], 'drug Y (0.5 µM)',  [1 0 1], '';...  
   };
 
-% for this particular set of data, set values of columns 3 and 4 based on
-% shortcut in column 5
-for k=1:size(dataSet,1)
-  dsInfo=dataSetDef_propSevo(dataSet{k,5});
-  dataSet{k,3}=dsInfo.label;
-  dataSet{k,4}=dsInfo.pCol;
-end
-
-% parameters to extract, axis labels
+% parameters to plot; column order: parameter name, axis label (see
+% template_call_pscdeal for a full list of parameters that are available)
 fullPSCPar={...
-  'freq','frequency';
   'allAmp', 'peak ampl.';
   'tDecay', 'decay time';
   'chargePPsc', 'charge/PSC';
@@ -53,7 +41,7 @@ nPar=size(fullPSCPar,1);
 
 % some parameters governing box plot appearance and export
 ap.subPlotGrid=[2 2];
-ap.dataLim=[0 3];
+ap.dataLim=[0 3.3];
 ap.factorGap=[7 2];
 ap.whisker=1.5;
 ap.plotFn='boxplot_IPSCPar';

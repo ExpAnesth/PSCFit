@@ -5,10 +5,9 @@ function pscfitgui
 % pscfitguifunc.m.
 
 % -------------------------------------------------------------------------
-% Version 2.2, May 2012
-% (C) Harald Hentschke (University of Tübingen)
+% Version 2.4, October 2018
+% (C) Harald Hentschke (University Hospital of Tuebingen)
 % -------------------------------------------------------------------------
-
 labelscale('fontSz',8,'scaleFac',1.0,'lineW',.25,'markSz',6); 
 
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

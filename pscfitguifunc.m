@@ -1,4 +1,4 @@
-function pscfitguifunc(src,eventdata,job,varargin)
+function pscfitguifunc(~,~,job,varargin)
 % ** function pscfitguifunc(src,eventdata,job,varargin)
 % Collection of callback routines for pscfitgui.m
 %                         >>> INPUT VARIABLES >>>
@@ -9,8 +9,8 @@ function pscfitguifunc(src,eventdata,job,varargin)
 %                                         figure
 
 % -------------------------------------------------------------------------
-% Version 2.3, July 2016
-% (C) Harald Hentschke (University of Tübingen)
+% Version 2.4, October 2018
+% (C) Harald Hentschke (University Hospital of Tuebingen)
 % -------------------------------------------------------------------------
 
 % We need persistent variables:
@@ -127,9 +127,13 @@ while ~done
       % ----- set up wp ('working' parameters)
       % --------------------------------------
       % ~~~~~~~ display options & matlab version section
-      % which version of matlab?
+      % which version of Matlab?
       wp.mver=ver;
-      wp.mver=str2double(wp.mver(strcmp('matlab',lower({wp.mver.Name}))).Version);
+      % note that in standalone deployed code function ver may produce
+      % several entries with .Name equal to 'Matlab', so we have to opt for
+      % one
+      tmpIx=find(strcmpi('matlab',{wp.mver.Name}),1);
+      wp.mver=str2double(wp.mver(tmpIx).Version);
       % *** handles to all objects in figure
       wp.handles=guihandles(findobj('tag','PSCFit'));
       % - counterparts to fields of ap but expressed in points
@@ -239,15 +243,15 @@ while ~done
       % same for wp
       wpFn=intersect(fieldnames(wp),uicFn);
       if ~isdeployed
-        % by default look for files in \PSCFit\parms
+        % by default look for files in \PSCFit\parameterFiles
         pfDir=mfilename('fullpath');
         pfDir=pfDir(1:max(strfind(pfDir,'\'))-1);
         w=what;
-        cd([pfDir '\parms']);
+        cd([pfDir '\parameterFiles']);
       end
       [tmpOptFn,tmpOptPath] = uigetfile('*.mat','pick parameter file');
       if ischar(tmpOptFn) && ischar(tmpOptPath)
-        load([tmpOptPath tmpOptFn]);
+        load([tmpOptPath tmpOptFn],'ap_uic','wp_uic');
         OKFlag=1;
         if ~exist('ap_uic','var') || ~exist('wp_uic','var')
           errordlg('Chosen file does not contain parameters. Please choose a different file.');
@@ -376,11 +380,11 @@ while ~done
       % same for wp
       wp_uic=rmfield(wp,setdiff(fieldnames(wp),uicFn));
       if ~isdeployed
-        % by default dump files in \PSCFit\parms
+        % by default dump files in \PSCFit\parameterFiles
         pfDir=mfilename('fullpath');
         pfDir=pfDir(1:max(strfind(pfDir,'\'))-1);
         w=what;
-        cd([pfDir '\parms']);
+        cd([pfDir '\parameterFiles']);
       end
       [tmpDataFn,tmpDataPath] = uiputfile('*.mat');
       if ischar(tmpDataFn) && ischar(tmpDataPath)
@@ -400,7 +404,7 @@ while ~done
       isAllParameterOK=true;
       doDigest=true;
       % previous results must be discarded
-      [wp,r]=discardResults(wp,r,sp);
+      [wp,r]=discardResults(wp,sp);
       if doDigest
         disp('** processing & checking options..');
         % ----- checks of parameters:
@@ -584,7 +588,7 @@ while ~done
       ap.isAverageCutout=0;
       % this takes care of all fit results, wp.is... and plots, except
       % cutouts plot...
-      [wp,r]=discardResults(wp,r,sp);
+      [wp,r]=discardResults(wp,sp);
       % ... done here
       if any(ishandle(sp.cutout.ph))
         delete(sp.cutout.ph);
@@ -592,13 +596,18 @@ while ~done
       end
       set(sp.cutout.th,'string','no data loaded');
       if strcmp(partJob,'readData')
+        doLoad=true;
         [tmpDataFn,tmpDataPath] = uigetfile('*.mat','pick *res* file',ds.dataPath);
-        % ** note that only *res* files will be accepted
-        tmpCond=[ischar(tmpDataFn) ischar(tmpDataPath)  ~isempty(strfind(tmpDataFn,'res'))];
-        if isequal(tmpCond,[true true false])
-          warndlg('please pick a *res.mat file');
+        if isnumeric(tmpDataFn) && ~tmpDataFn
+          doLoad=false;
+        else
+          % ** note that only *res* files will be accepted
+          if ischar(tmpDataFn) && ~contains(tmpDataFn,'res')
+            warndlg('please pick a *res*.mat file');
+            doLoad=false;
+          end
         end
-        if all(tmpCond)
+        if doLoad
           % names of .mat files:
           tmpix=strfind(tmpDataFn,'_res.mat');
           % - 'core' file name
@@ -618,10 +627,6 @@ while ~done
             tsl=[];
           end
           % load raw data
-%           curDeblankChName=head.wp.dataChanName{1};
-%           curDeblankChName=curDeblankChName(~isspace(curDeblankChName));
-%           [d,si]=matDload([tmpDataPath strrep(head.ds.dataFn,'.abf','.mat')],...
-%             'channels',{curDeblankChName});
           [d,si]=abfload([tmpDataPath head.ds.dataFn],'channels',head.wp.dataChanName);
           % filter
           if isfinite(ap.loCFreq)
@@ -749,7 +754,7 @@ while ~done
           cutoutFilt=[];
           cutoutFitHist=[];
           % this takes care of all fit results and plots except sp.cutout.axH
-          [wp,r]=discardResults(wp,r,sp);
+          [wp,r]=discardResults(wp,sp);
           ap.isAverageCutout=1;
           % *** now compute average of cutouts and set ts to 0
           cutout=mean(cutout,2);
@@ -769,7 +774,7 @@ while ~done
     case 'prepareFit'
       if ~isempty(cutout)
         % discard all previous results
-        [wp,r]=discardResults(wp,r,sp);
+        [wp,r]=discardResults(wp,sp);
         % set flag that data have been prepared
         wp.isPrepareFit=true;
         % reset continuous traces of fit (history)
@@ -1448,7 +1453,7 @@ r.qFit3(~r.OKIx)=[];
 % last
 r.OKIx(~r.OKIx)=[];
 
-function [wp,r]=discardResults(wp,r,sp)
+function [wp,r]=discardResults(wp,sp)
 wp.isPrepareFit=false;
 wp.isFit=false;
 r=[];
@@ -1473,11 +1478,11 @@ if ~isempty(coIx)
   subplot(sp.selectCutout.axH), cla
   hold on
   % unfiltered ones first
-  [ylim,dy]=pllplot(cutout(ix,coIx),'spacing','percentile','dy',10,'noplot',1);
-  [ylim,dy,yscaleFac,ph]=pllplot(cutout(ix,coIx),'spacing','fixed',...
+  [~,dy]=pllplot(cutout(ix,coIx),'spacing','percentile','dy',10,'noplot',1);
+  [ylim,dy,~,ph]=pllplot(cutout(ix,coIx),'spacing','fixed',...
     'dy',dy);
   set(ph,'linewidth',2.5);
-  [ylim,dy,yscaleFac,ph]=pllplot(cutoutFilt(ix,coIx),'spacing','fixed',...
+  [~,dy,~,ph]=pllplot(cutoutFilt(ix,coIx),'spacing','fixed',...
     'dy',dy,'ylim',ylim);
   set(ph,'color',wp.FitEventCol,'linewidth',1.5);
   % plot detected peaks
@@ -1499,8 +1504,8 @@ if ~isempty(coIx)
     tmpY=cutoutFilt(tmpX,coIx(g));
     m2(g)=interp1(tmpX,tmpY,r.t90(coIx(g))-wp.xOffs_pts);
   end
-  ph=plot(r.t10(coIx)-wp.xIntvRiseT_pts(1)+1,m1+cumsum([0 dy]),'w+');
-  ph=plot(r.t90(coIx)-wp.xIntvRiseT_pts(1)+1,m2+cumsum([0 dy]),'w+');
+  plot(r.t10(coIx)-wp.xIntvRiseT_pts(1)+1,m1+cumsum([0 dy]),'w+');
+  plot(r.t90(coIx)-wp.xIntvRiseT_pts(1)+1,m2+cumsum([0 dy]),'w+');
   % if there are three or fewer cutouts to plot squeeze y axis
   if numel(coIx)<=3
     nicexyax(2);

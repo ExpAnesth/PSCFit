@@ -525,7 +525,8 @@ for g=1:nFile
   if any(ismember(depPar,{'baseline','noise','chargePhas'}))
     nPts=ds.phIntv/(si/1e3);
     [base,dev,phas]=phantosic(loD,nPts,ds.phBin,'method',ds.phMethod,...
-      'polarity',ds.phPolarity,'prc',ds.phPrc,'frame',gr.doMonitorPhantosic,'pau',1);
+      'polarity',ds.phPolarity,'prc',ds.phPrc,'frame',gr.doMonitorPhantosic,...
+      'pau',1,'si',si);
   end
   % embed phantosic parameters computed above
   for idi=1:nRawPar
@@ -771,8 +772,6 @@ ds.rawPar={''};
 % -- parameters to be plotted (struct)
 ds.plotPar=[];
 % -- raw data
-% target sampling freq (Hz)
-ds.sampFreq=nan;
 % corner frequency of lowpass filter (set to [] for no filtering)
 ds.loCFreq=nan;
 % settings for differentiator filter
