@@ -17,7 +17,7 @@ Matlab toolboxes required:
 ### pscfitgui
 GUI for fitting exponentials to the decay phase of PSCs. 
 
-![screenshot](/doc/screenshot_pscfitgui.png)
+![snapshot](/doc/snapshot_pscfitgui.png)
 Features:
 * reading of raw data files (current traces) in Axon Binary Format (abf)
 * reading of PSC time stamps (ideally produced by threshdetgui) from *.mat files
@@ -41,13 +41,13 @@ Function which performs batch analysis and summary of PSC parameters. It collect
 
 The function runs through a user-defined set of experiments, computes/collects all parameters, saves them in a file so that they can be easily accessed for plots and statistical analysis, and also optionally produces a summary figure. See template_call_pscdeal.m
 
-![screenshot](/doc/snapshot_pscdeal.png)
+![snapshot](/doc/snapshot_pscdeal.png)
 
 
 #### utilities/phantosic
 Function which computes the average base line level, base line noise, and the time-averaged current carried by phasic PSCs. Inspired by Glykys and Mody (J.Physiol. 582, 1163–1178, 2007). The function is called from within pscdeal, but can also be used independently.
 
-![screenshot](/doc/snapshot_phantosic.png)
+![snapshot](/doc/snapshot_phantosic.png)
 
 #### utilities/sumPlot_PSC
 Function which generates collections of simple line plots of PSC parameters as processed by pscdeal. See template_call_sumPlot_PSC.m.
@@ -67,7 +67,7 @@ See template_call_analysis_PSC_mSeries.m.
 #### utilities/analysis_IPSC_mvar
 Performs multi-variate analysis of PSCs; experimental, under development. See template_call_analysis_IPSC_mvar.m.
 
-![screenshot](/doc/snapshot_analysis_IPSC_mvar.png)
+![snapshot](/doc/snapshot_analysis_IPSC_mvar.png)
 
 
 ## General note on repositories in the ExpAnesth organization
