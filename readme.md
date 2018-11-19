@@ -15,7 +15,7 @@ Matlab toolboxes required:
 * Curve Fitting
 
 ### pscfitgui
-GUI for fitting exponentials to the decay phase of PSCs. 
+GUI for parameterization of phasic postsynaptic currents (PSCs). 
 
 ![snapshot](/doc/snapshot_pscfitgui.png)
 Features:
@@ -33,7 +33,7 @@ Features:
 * metric-based automatic and manual removal of individual events
 * saving of all computed PSC parameters and analysis hyperparameters to file
 
-#### utilities/pscdeal
+### utilities/pscdeal
 Function which performs batch analysis and summary of PSC parameters. It collects parameters computed by pscfitgui, and/or computes a range of additional parameters, some of them based on detected PSCs, others based solely on the raw data. Specifically, the analyses and parameters are the following:
 1. raw data-based: computation of the average base line level, base line noise, and time-averaged current carried by phasic PSCs; see function phantosic below
 2. 'detected PSCs'-based: computation of parameters that can be extracted from the time stamps of the PSCs and the raw data, like rise time, amplitude and frequency of occurrence of PSCs
@@ -44,18 +44,18 @@ The function runs through a user-defined set of experiments, computes/collects a
 ![snapshot](/doc/snapshot_pscdeal.png)
 
 
-#### utilities/phantosic
+### utilities/phantosic
 Function which computes the average base line level, base line noise, and the time-averaged current carried by phasic PSCs. Inspired by Glykys and Mody (J.Physiol. 582, 1163–1178, 2007). The function is called from within pscdeal, but can also be used independently.
 
 ![snapshot](/doc/snapshot_phantosic.png)
 
-#### utilities/sumPlot_PSC
+### utilities/sumPlot_PSC
 Function which generates collections of simple line plots of PSC parameters as processed by pscdeal. See template_call_sumPlot_PSC.m.
 
 ![snapshot](/doc/snapshot_sumPlot_PSC.png)
 
 
-#### utilities/analysis_PSC_mSeries
+### utilities/analysis_PSC_mSeries
 Function useful for depicting and comparing PSC parameters across experimental series, each of them processed by pscdeal.
 * generates a boxplot of normalized PSC parameter values
 * puts out the numbers rearranged such that statistics on the differences between the series can easily be performed
@@ -64,7 +64,7 @@ See template_call_analysis_PSC_mSeries.m.
 
 ![snapshot](/doc/snapshot_analysis_PSC_mSeries.png)
 
-#### utilities/analysis_IPSC_mvar
+### utilities/analysis_IPSC_mvar
 Performs multi-variate analysis of PSCs; experimental, under development. See template_call_analysis_IPSC_mvar.m.
 
 ![snapshot](/doc/snapshot_analysis_IPSC_mvar.png)

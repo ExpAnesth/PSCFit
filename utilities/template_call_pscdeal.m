@@ -151,9 +151,10 @@ ds.differfi.passbf=40;
 ds.differfi.stopbf=3000;
 % scaling factor
 ds.differfi.scalFac=10;
-% determine whether computation of PSC amplitudes shall be visualized in a
-% separate, temporary figure with interactive features, and upon which
-% condition the remaining computations shall be resumed:
+% determine whether computation of PSC amplitudes via the 'compound' method
+% shall be visualized in a separate, temporary figure with interactive
+% features, and upon which condition the remaining computations shall be
+% resumed:
 % 'none' - no visuals
 % 'pause' - computations will resume after figure has been displayed for 1 second
 % 'waitfor' - computations will resume once figure has been deleted by user
