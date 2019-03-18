@@ -1117,8 +1117,9 @@ while ~done
         lst=r2array(ap.nDecayComponent,'parameterList',r);
         set(sp.scatter(1).xAxMenuH,'string',lst,'value',find(strcmp(lst,'time stamp')));
         set(sp.scatter(1).yAxMenuH,'string',lst,'value',find(strcmp(lst,'fit quality:R2adj')));
-        % §§ also update overview cutouts plot!
-        job(1)={'plotScatter'};
+        % events marked as bad via r.OKIx have to be deleted here because
+        % r.OKIx may be reset by user action in job 'reactCursorScatter'
+        job(1)={'deleteEvents'};
       else
         if isempty(cutout)
           h=warndlg('no data loaded');
