@@ -516,7 +516,7 @@ for g=1:nFile
   %          collect/compute phantosic parameters from raw data 
   % -----------------------------------------------------------------------  
   disp('collecting & computing PSC detection-independent parameters from raw data (''phantosic'')...')  
-  if ~isempty(ds.loCFreq) && isfinite(ds.loCFreq)
+  if doReadRawData && ~isempty(ds.loCFreq) && isfinite(ds.loCFreq)
     if ~isequal(ds.loCFreq,loCFreq)
       loCFreq=ds.loCFreq;
       loD=lofi(d,si,loCFreq);
